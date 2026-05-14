@@ -57,8 +57,15 @@ export default function AdminPage() {
   };
 
   const handleLogout = () => {
+    const t = activeToken;
     sessionStorage.removeItem("admin_token");
     setToken(null);
+    if (t) {
+      fetch("/api/auth", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${t}` },
+      });
+    }
   };
 
   if (activeToken) {

@@ -42,15 +42,18 @@ export default function CCompilerPage() {
       if (!res.ok) throw new Error("Compilation service unavailable");
 
       const data = await res.json();
+      const compileResult = data.compile;
       const runResult = data.run;
 
-      if (runResult.stderr) {
+      if (compileResult?.stderr) {
+        setError(compileResult.stderr);
+      } else if (runResult?.stderr) {
         setError(runResult.stderr);
       }
-      if (runResult.stdout) {
+      if (runResult?.stdout) {
         setOutput(runResult.stdout);
       }
-      if (!runResult.stdout && !runResult.stderr) {
+      if (!runResult?.stdout && !runResult?.stderr && !compileResult?.stderr) {
         setOutput("(No output)");
       }
     } catch (err) {
