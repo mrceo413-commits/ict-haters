@@ -21,8 +21,12 @@ export default function CqChapterClient({ chapter }: { chapter: string }) {
 
   useEffect(() => {
     fetch(`/api/cq?chapter=${chapter}`)
-      .then((r) => r.json())
-      .then((d) => setData(d));
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to load");
+        return r.json();
+      })
+      .then((d) => setData(d))
+      .catch(() => setData(null));
   }, [chapter]);
 
   return (
