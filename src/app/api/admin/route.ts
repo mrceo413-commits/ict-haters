@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { readStore, writeStore } from "@/lib/data";
+import { isValidToken } from "@/app/api/auth/route";
 import fs from "fs";
 import path from "path";
 
@@ -9,9 +10,13 @@ function getAuthToken(request: NextRequest): string | null {
   return auth.slice(7);
 }
 
+function sanitizeFileName(name: string): string {
+  return path.basename(name).replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
 export async function POST(request: NextRequest) {
   const token = getAuthToken(request);
-  if (!token) {
+  if (!token || !isValidToken(token)) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -27,7 +32,7 @@ export async function POST(request: NextRequest) {
       if (!title || !author || !file) {
         return Response.json({ error: "Missing fields" }, { status: 400 });
       }
-      const fileName = `${Date.now()}-${file.name}`;
+      const fileName = `${Date.now()}-${sanitizeFileName(file.name)}`;
       const uploadDir = path.join(process.cwd(), "public", "uploads", "books");
       fs.mkdirSync(uploadDir, { recursive: true });
       const buffer = Buffer.from(await file.arrayBuffer());
@@ -56,7 +61,12 @@ export async function POST(request: NextRequest) {
       if (!chapter || !quizTitle || !questionsJson) {
         return Response.json({ error: "Missing fields" }, { status: 400 });
       }
-      const questions = JSON.parse(questionsJson);
+      let questions;
+      try {
+        questions = JSON.parse(questionsJson);
+      } catch {
+        return Response.json({ error: "Invalid JSON in questions" }, { status: 400 });
+      }
       if (!store.quizzes[chapter]) store.quizzes[chapter] = [];
       store.quizzes[chapter].push({
         id: `q${chapter}-${Date.now()}`,
@@ -76,7 +86,7 @@ export async function POST(request: NextRequest) {
       if (!qbType || !qTitle || !qFile) {
         return Response.json({ error: "Missing fields" }, { status: 400 });
       }
-      const qFileName = `${Date.now()}-${qFile.name}`;
+      const qFileName = `${Date.now()}-${sanitizeFileName(qFile.name)}`;
       const qUploadDir = path.join(process.cwd(), "public", "uploads", "questions");
       fs.mkdirSync(qUploadDir, { recursive: true });
       const qBuffer = Buffer.from(await qFile.arrayBuffer());
@@ -102,7 +112,7 @@ export async function POST(request: NextRequest) {
       if (!mtType || !mtTitle || !mtFile) {
         return Response.json({ error: "Missing fields" }, { status: 400 });
       }
-      const mtFileName = `${Date.now()}-${mtFile.name}`;
+      const mtFileName = `${Date.now()}-${sanitizeFileName(mtFile.name)}`;
       const mtUploadDir = path.join(process.cwd(), "public", "uploads", "model-tests");
       fs.mkdirSync(mtUploadDir, { recursive: true });
       const mtBuffer = Buffer.from(await mtFile.arrayBuffer());
@@ -136,7 +146,7 @@ export async function POST(request: NextRequest) {
       }
       let pdfUrl = store.cqContent[cqChapter][cqType].pdfUrl;
       if (cqFile && cqFile.size > 0) {
-        const cqFileName = `${Date.now()}-${cqFile.name}`;
+        const cqFileName = `${Date.now()}-${sanitizeFileName(cqFile.name)}`;
         const cqUploadDir = path.join(process.cwd(), "public", "uploads", "cq");
         fs.mkdirSync(cqUploadDir, { recursive: true });
         const cqBuffer = Buffer.from(await cqFile.arrayBuffer());
